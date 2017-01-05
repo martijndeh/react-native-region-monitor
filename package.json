@@ -1,0 +1,25 @@
+
+{
+  "name": "react-native-region-monitor",
+  "version": "1.0.0",
+  "description": "A simple and easy to use geographical region monitoring API for React Native. This only works for iOS.",
+  "main": "index.ios.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "react-native",
+    "react-component",
+    "ios",
+    "geolocation",
+    "geofence",
+    "background",
+    "region",
+    "monitoring"
+  ],
+  "author": "Martijn de Haan",
+  "license": "MIT",
+  "peerDependencies": {
+    "react-native": "^0.29.0"
+  }
+}
