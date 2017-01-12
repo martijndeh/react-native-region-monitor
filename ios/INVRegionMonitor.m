@@ -1,6 +1,6 @@
 #import "INVRegionMonitor.h"
 #import <CoreLocation/CoreLocation.h>
-#import "RCTLog.h"
+#import <React/RCTLog.h>
 
 // TODO: Export this event name
 NSString* INVRegionMonitorDidChangeRegionEvent = @"regionMonitorDidChangeRegion";

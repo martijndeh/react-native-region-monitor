@@ -1,5 +1,5 @@
-#import "RCTBridgeModule.h"
-#import "RCTEventEmitter.h"
+#import <React/RCTBridgeModule.h>
+#import <React/RCTEventEmitter.h>
 #import <CoreLocation/CoreLocation.h>
 
 @interface INVRegionMonitor : RCTEventEmitter <RCTBridgeModule, CLLocationManagerDelegate>
