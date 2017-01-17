@@ -194,14 +194,6 @@ RCT_EXPORT_METHOD(requestAuthorization:(RCTPromiseResolveBlock)resolve
     }
 }
 
-- (void) locationManager:(CLLocationManager *)locationManager
-       didDetermineState:(CLRegionState)state
-               forRegion:(CLRegion *)region {
-    if (state == CLRegionStateInside) {
-        [self _sendRegionChangeEventWithIdentifier:region.identifier didEnter:YES didExit:NO];
-    }
-}
-
 - (void)locationManager:(CLLocationManager *)manager didChangeAuthorizationStatus:(CLAuthorizationStatus)status {
     RCTLogInfo(@"Auth is %d", status);
 
