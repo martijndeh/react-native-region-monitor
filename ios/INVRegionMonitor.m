@@ -1,4 +1,5 @@
 #import "INVRegionMonitor.h"
+
 #import <CoreLocation/CoreLocation.h>
 #import <React/RCTLog.h>
 
@@ -12,6 +13,8 @@ NSString* INVRegionMonitorErrorDomain = @"INVRegionMonitorErrorDomain";
 @synthesize unknownRegions;
 @synthesize pendingAuthorizations;
 @synthesize isRequestingAuthorization;
+@synthesize isQueueingEvents;
+@synthesize queuedRegionEvents;
 
 RCT_EXPORT_MODULE()
 
@@ -42,6 +45,10 @@ RCT_EXPORT_MODULE()
     if (self) {
         locationManager = [[CLLocationManager alloc] init];
         locationManager.delegate = self;
+
+        isQueueingEvents = YES;
+        queuedRegionEvents = [[NSMutableArray alloc] init];
+
         pendingRegions = [[NSMutableDictionary alloc] init];
         unknownRegions = [[NSMutableDictionary alloc] init];
         pendingAuthorizations = [[NSMutableArray alloc] init];
@@ -49,6 +56,24 @@ RCT_EXPORT_MODULE()
     }
 
     return self;
+}
+
+- (void)_sendQueuedRegionEvents {
+	for (NSDictionary *body in queuedRegionEvents) {
+		[self sendEventWithName:INVRegionMonitorDidChangeRegionEvent body:body];
+	}
+
+	[queuedRegionEvents removeAllObjects];
+}
+
+- (void)startObserving {
+	if (isQueueingEvents) {
+		isQueueingEvents = NO;
+
+		dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0), dispatch_get_main_queue(), ^{
+			[self _sendQueuedRegionEvents];
+		});
+	}
 }
 
 - (void)_failAuthorizationWithError:(NSError *)error {
@@ -114,13 +139,22 @@ RCT_EXPORT_MODULE()
 }
 
 - (void)_sendRegionChangeEventWithIdentifier:(NSString *)identifier didEnter:(BOOL)didEnter didExit:(BOOL)didExit {
-    [self sendEventWithName:INVRegionMonitorDidChangeRegionEvent body:@{
+	NSDictionary *body = @{
         @"region": @{
             @"identifier": identifier,
         },
         @"didEnter": @(didEnter),
         @"didExit": @(didExit),
-    }];
+    };
+
+    if (isQueueingEvents) {
+		[queuedRegionEvents addObject:body];
+
+		// TODO: Check the count of the queuedRegionEvents as it shouldn't grow too big.
+	}
+	else {
+    	[self sendEventWithName:INVRegionMonitorDidChangeRegionEvent body:body];
+	}
 }
 
 - (CLCircularRegion *)_getMonitoredRegionWithIdentifier:(NSString *)identifier {
