@@ -2,8 +2,7 @@
 #import <CoreLocation/CoreLocation.h>
 #import <React/RCTLog.h>
 
-// TODO: Export this event name
-NSString* INVRegionMonitorDidChangeRegionEvent = @"regionMonitorDidChangeRegion";
+NSString* INVRegionMonitorDidChangeRegionEvent = @"INVRegionMonitorDidChangeRegionEvent";
 NSString* INVRegionMonitorErrorDomain = @"INVRegionMonitorErrorDomain";
 
 @implementation INVRegionMonitor
@@ -27,6 +26,13 @@ RCT_EXPORT_MODULE()
 - (NSArray<NSString *> *)supportedEvents
 {
     return @[INVRegionMonitorDidChangeRegionEvent];
+}
+
+- (NSDictionary *)constantsToExport
+{
+	return @{
+		@"regionMonitorDidChangeRegion": INVRegionMonitorDidChangeRegionEvent,
+	};
 }
 
 - (instancetype) init {

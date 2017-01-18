@@ -8,7 +8,7 @@ export default {
 	removeCircularRegion: INVRegionMonitor.removeCircularRegion,
 	requestAuthorization: INVRegionMonitor.requestAuthorization,
 	onRegionChange: (callback) => {
-		const subscription = RegionMonitorEventEmitter.addListener('regionMonitorDidChangeRegion', callback);
+		const subscription = RegionMonitorEventEmitter.addListener(INVRegionMonitor.regionMonitorDidChangeRegion, callback);
 
 		return function off() {
 			subscription.remove();
