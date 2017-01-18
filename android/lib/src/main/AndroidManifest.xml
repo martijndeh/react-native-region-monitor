@@ -4,7 +4,7 @@
 	<uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
 
 	<application>
-		<service android:name="com.cube.geofencing.RNHeadlessTask"/>
+		<service android:name="com.cube.geofencing.RNRegionTransitionService"/>
 
 		<receiver android:name="com.cube.geofencing.RNRegionMonitorBootReceiver">
 			<intent-filter>
