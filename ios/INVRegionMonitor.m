@@ -9,6 +9,7 @@ NSString* INVRegionMonitorErrorDomain = @"INVRegionMonitorErrorDomain";
 
 @synthesize locationManager;
 @synthesize pendingRegions;
+@synthesize unknownRegions;
 @synthesize pendingAuthorizations;
 @synthesize isRequestingAuthorization;
 
@@ -42,12 +43,48 @@ RCT_EXPORT_MODULE()
         locationManager = [[CLLocationManager alloc] init];
         locationManager.delegate = self;
         pendingRegions = [[NSMutableDictionary alloc] init];
+        unknownRegions = [[NSMutableDictionary alloc] init];
         pendingAuthorizations = [[NSMutableArray alloc] init];
         isRequestingAuthorization = NO;
     }
 
     return self;
 }
+
+- (void)_failAuthorizationWithError:(NSError *)error {
+    for (NSDictionary *pendingAuthorization in pendingAuthorizations) {
+        RCTPromiseRejectBlock reject = pendingAuthorization[@"reject"];
+        reject(@"authorization_failed", @"Requesting region monitoring authorization failed.", error);
+    }
+
+    [pendingAuthorizations removeAllObjects];
+
+    for (NSString *identifier in pendingRegions.keyEnumerator) {
+        NSDictionary *pendingRegion = pendingRegions[identifier];
+        RCTPromiseRejectBlock reject = pendingRegion[@"reject"];
+        reject(@"monitoring_failed", @"Failed to start region monitoring.", error);
+    }
+
+    [pendingRegions removeAllObjects];
+}
+
+- (void)_requestAuthorization {
+    NSString *plistKey = @"NSLocationAlwaysUsageDescription";
+    NSString *alwaysUsageDescription = [NSBundle mainBundle].infoDictionary[plistKey];
+
+    if (!alwaysUsageDescription) {
+        NSError *error = [[NSError alloc] initWithDomain:INVRegionMonitorErrorDomain code:9 userInfo:@{
+            @"status": @0,
+            @"message": [NSString stringWithFormat:@"%@ not set.", plistKey],
+        }];
+
+        [self _failAuthorizationWithError:error];
+    }
+    else {
+        [locationManager requestAlwaysAuthorization];
+    }
+}
+
 
 - (void)_addCircularRegion:(NSDictionary *)center
                     radius:(CLLocationDistance)radius
@@ -126,11 +163,17 @@ RCT_EXPORT_METHOD(addCircularRegion:(nonnull NSDictionary *)center
         @"reject": reject,
     };
 
+    RCTLogInfo(@"Checking status %d", status);
+
     if (status == kCLAuthorizationStatusNotDetermined) {
+        RCTLogInfo(@"isRequestingAuthorization %d", isRequestingAuthorization);
+
         if (!isRequestingAuthorization) {
             isRequestingAuthorization = YES;
 
-            [locationManager requestAlwaysAuthorization];
+            RCTLogInfo(@"requestAlwaysAuthorization %d", status);
+
+            [self _requestAuthorization];
         }
 
         return;
@@ -183,7 +226,7 @@ RCT_EXPORT_METHOD(requestAuthorization:(RCTPromiseResolveBlock)resolve
                 @"reject": reject,
             }];
 
-            [locationManager requestAlwaysAuthorization];
+            [self _requestAuthorization];
         }
         else if (status == kCLAuthorizationStatusAuthorizedAlways ||
                  status == kCLAuthorizationStatusAuthorized) {
@@ -203,9 +246,36 @@ RCT_EXPORT_METHOD(requestAuthorization:(RCTPromiseResolveBlock)resolve
 - (void) locationManager:(CLLocationManager *)locationManager
        didDetermineState:(CLRegionState)state
                forRegion:(CLRegion *)region {
-    if (state == CLRegionStateInside) {
-        [self _sendRegionChangeEventWithIdentifier:region.identifier didEnter:YES didExit:NO];
+    RCTLogInfo(@"locationManager:didDetermineState:forRegion: %d %@", state, region.identifier);
+    RCTLogInfo(@"Monitored regions %@", locationManager.monitoredRegions);
+
+    if (state == CLRegionStateUnknown) {
+        // TODO: Should we add some sort of delay here?
+
+        [locationManager requestStateForRegion:region];
     }
+    else {
+        BOOL isUnknownRegion = unknownRegions[region.identifier];
+        BOOL didEnter = NO;
+        BOOL didExit = NO;
+
+        if (state == CLRegionStateOutside) {
+            // If this is an unknown region (a region we just added) we don't want to send an exit event.
+            didExit = !isUnknownRegion;
+        }
+        else if (state == CLRegionStateInside) {
+            didEnter = YES;
+        }
+
+        if (didExit || didEnter) {
+            [self _sendRegionChangeEventWithIdentifier:region.identifier didEnter:didEnter didExit:didExit];
+        }
+
+        if (isUnknownRegion) {
+            [unknownRegions removeObjectForKey:region.identifier];
+        }
+    }
+
 }
 
 - (void)locationManager:(CLLocationManager *)manager didChangeAuthorizationStatus:(CLAuthorizationStatus)status {
@@ -213,10 +283,9 @@ RCT_EXPORT_METHOD(requestAuthorization:(RCTPromiseResolveBlock)resolve
 
     isRequestingAuthorization = NO;
 
-    if (pendingRegions.count > 0) {
-        if (status == kCLAuthorizationStatusAuthorizedAlways ||
-            status == kCLAuthorizationStatusAuthorized) {
-            // We add all regions and take it from there.
+    if (status == kCLAuthorizationStatusAuthorizedAlways ||
+        status == kCLAuthorizationStatusAuthorized) {
+        if (pendingRegions.count > 0) {
             for (NSString *identifier in pendingRegions.keyEnumerator) {
                 NSDictionary *pendingRegion = pendingRegions[identifier];
                 NSDictionary *center = pendingRegion[@"center"];
@@ -224,63 +293,33 @@ RCT_EXPORT_METHOD(requestAuthorization:(RCTPromiseResolveBlock)resolve
 
                 [self _addCircularRegion:center radius:radius.doubleValue identifier:identifier];
             }
+
+            // We shouldn't remove the pending regions as they are resolved or rejected after they
+            // are added.
         }
-        else {
-            NSError *error = [[NSError alloc] initWithDomain:INVRegionMonitorErrorDomain code:5 userInfo:@{
-                @"status": @(status),
-            }];
 
-            for (NSString *identifier in pendingRegions.keyEnumerator) {
-                NSDictionary *pendingRegion = pendingRegions[identifier];
-                RCTPromiseRejectBlock reject = pendingRegion[@"reject"];
-                reject(@"monitoring_failed", @"Failed to start region monitoring.", error);
-            }
-
-            [pendingRegions removeAllObjects];
-        }
-    }
-
-    if (pendingAuthorizations.count > 0) {
-        if (status == kCLAuthorizationStatusAuthorizedAlways ||
-            status == kCLAuthorizationStatusAuthorized) {
+        if (pendingAuthorizations.count > 0) {
             for (NSDictionary *pendingAuthorization in pendingAuthorizations) {
                 RCTPromiseResolveBlock resolve = pendingAuthorization[@"resolve"];
                 resolve(nil);
             }
-        }
-        else {
-            NSError *error = [[NSError alloc] initWithDomain:INVRegionMonitorErrorDomain code:5 userInfo:@{
-                @"status": @(status),
-            }];
 
-            for (NSDictionary *pendingAuthorization in pendingAuthorizations) {
-                RCTPromiseRejectBlock reject = pendingAuthorization[@"reject"];
-                reject(@"authorization_failed", @"Requesting region monitoring authorization failed.", error);
-            }
+            [pendingAuthorizations removeAllObjects];
         }
-
-        [pendingAuthorizations removeAllObjects];
     }
-}
+    else {
+        NSError *error = [[NSError alloc] initWithDomain:INVRegionMonitorErrorDomain code:5 userInfo:@{
+            @"status": @(status),
+        }];
 
-- (void)locationManager:(CLLocationManager *)manager
-         didEnterRegion:(CLRegion *)region {
-    RCTLogInfo(@"Did enter region %@", region.identifier);
-
-    [self _sendRegionChangeEventWithIdentifier:region.identifier didEnter:YES didExit:NO];
-}
-
-- (void)locationManager:(CLLocationManager *)manager
-          didExitRegion:(CLRegion *)region {
-    RCTLogInfo(@"Did exit region %@", region.identifier);
-
-    [self _sendRegionChangeEventWithIdentifier:region.identifier didEnter:NO didExit:YES];
+        [self _failAuthorizationWithError:error];
+    }
 }
 
 - (void)locationManager:(CLLocationManager *)manager
 monitoringDidFailForRegion:(CLRegion *)region
               withError:(NSError *)error {
-    RCTLogInfo(@"Region failed to monitor %@ %@!", region.identifier, error);
+    RCTLogInfo(@"monitoringDidFailForRegion:withError %@ %@!", region.identifier, error);
 
     // TODO: Check if we already have this region in the monitoredRegions?
     RCTLogInfo(@"%@", locationManager.monitoredRegions);
@@ -298,7 +337,7 @@ monitoringDidFailForRegion:(CLRegion *)region
 
 - (void)locationManager:(CLLocationManager *)manager
 didStartMonitoringForRegion:(CLRegion *)region {
-    RCTLogInfo(@"Yes start monitor %@!", region.identifier);
+    RCTLogInfo(@"didStartMonitoringForRegion %@!", region.identifier);
 
     NSString *identifier = region.identifier;
     NSDictionary *pendingRegion = pendingRegions[identifier];
@@ -309,8 +348,14 @@ didStartMonitoringForRegion:(CLRegion *)region {
 
         [pendingRegions removeObjectForKey:identifier];
 
-        // We request the state so we can immediatelly emit an event if we're already inside this region.
-        [locationManager requestStateForRegion:region];
+        RCTLogInfo(@"Check the state of the region... %@", region);
+
+        unknownRegions[identifier] = @YES;
+
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+            // We request the state so we can immediatelly emit an event if we're already inside this region.
+            [locationManager requestStateForRegion:region];
+        });
     }
 }
 
