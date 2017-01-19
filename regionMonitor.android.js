@@ -2,8 +2,13 @@ import {AppRegistry, NativeModules} from 'react-native';
 
 const {RNRegionMonitor} = NativeModules;
 
-const queuedEvents = [];
-const callbacks = [];
+/**
+ * So that we can use the same onRegionChange interface as iOS, along with a headless task, we queue events that arrive before any callbacks are present
+ *
+ * Those events are sent to newly attached callbacks when they arrive.
+ */
+let queuedEvents = [];
+let callbacks = [];
 
 AppRegistry.registerHeadlessTask("region-monitor-transition", () => {
 	return (geofenceEvent) => {
@@ -23,6 +28,7 @@ AppRegistry.registerHeadlessTask("region-monitor-transition", () => {
 
 export default {
 	addCircularRegion: RNRegionMonitor.addCircularRegion,
+	clearRegions: RNRegionMonitor.clearRegions,
 	removeCircularRegion: RNRegionMonitor.removeCircularRegion,
 	requestAuthorization: () => {
 		// noop
@@ -31,6 +37,7 @@ export default {
 		queuedEvents.forEach(queuedEvent => {
 			callback(queuedEvent);
 		});
+		queuedEvents = [];
 
 		callbacks.push(callback);
 	},

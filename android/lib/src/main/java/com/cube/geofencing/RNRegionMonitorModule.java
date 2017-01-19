@@ -81,6 +81,28 @@ public class RNRegionMonitorModule extends ReactContextBaseJavaModule implements
 		});
 	}
 
+	@ReactMethod
+	public void clearRegions(final Promise promise)
+	{
+		Log.d(TAG, "clearRegions");
+		LocationServices.GeofencingApi.removeGeofences(googleApiClient, geofencePendingIntent).setResultCallback(new ResultCallbacks<Status>()
+		{
+			@Override
+			public void onSuccess(@NonNull Status status)
+			{
+				Log.d(TAG, "removeCircularRegion: " + status);
+				promise.resolve(null);
+			}
+
+			@Override
+			public void onFailure(@NonNull Status status)
+			{
+				Log.d(TAG, "removeCircularRegion: " + status);
+				promise.reject(Integer.toString(status.getStatusCode()), status.getStatusMessage());
+			}
+		});
+	}
+
 	@javax.annotation.Nullable
 	@Override
 	public Map<String, Object> getConstants()
