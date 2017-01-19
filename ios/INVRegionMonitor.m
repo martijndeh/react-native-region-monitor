@@ -222,7 +222,7 @@ RCT_EXPORT_METHOD(clearRegions:(RCTPromiseResolveBlock)resolve
     [locationManager.monitoredRegions enumerateObjectsUsingBlock:^(__kindof CLRegion * _Nonnull region, BOOL * _Nonnull stop) {
         RCTLogInfo(@"Stop monitoring region %@", region.identifier);
         [locationManager stopMonitoringForRegion:region];
-    }]
+    }];
     
     resolve(nil);
 }
