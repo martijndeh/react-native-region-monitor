@@ -1,109 +1,113 @@
 package com.cube.geofencing;
 
-import android.app.PendingIntent;
-import android.content.Intent;
-import android.os.Bundle;
 import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 import android.util.Log;
 
+import com.cube.geofencing.model.MonitoredRegion;
+import com.cube.geofencing.model.PersistableData;
 import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.ReadableMap;
-import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.ResultCallbacks;
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.Geofence;
-import com.google.android.gms.location.GeofencingRequest;
-import com.google.android.gms.location.LocationServices;
 
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import javax.annotation.Nullable;
+
 /**
  * Defines the interface available from Javascript in order to manage monitored regions
  */
-public class RNRegionMonitorModule extends ReactContextBaseJavaModule implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener
+public class RNRegionMonitorModule extends ReactContextBaseJavaModule
 {
 	public static final String TAG = "RNRM";
-
 	public static final String TRANSITION_TASK_NAME = "region-monitor-transition";
 	public static final String REGION_SYNC_TASK_NAME = "region-monitor-sync";
 
-	private GoogleApiClient googleApiClient;
-	private PendingIntent geofencePendingIntent;
+	private PersistableData data;
+	private GeofenceManager geofenceManager;
 
-	public RNRegionMonitorModule(ReactApplicationContext reactContext)
+	public RNRegionMonitorModule(@NonNull ReactApplicationContext reactContext)
 	{
 		super(reactContext);
-		googleApiClient = new GoogleApiClient.Builder(reactContext).addConnectionCallbacks(this)
-		                                                           .addOnConnectionFailedListener(this)
-		                                                           .addApi(LocationServices.API)
-		                                                           .build();
-		googleApiClient.connect();
-
-		Intent intent = new Intent(reactContext, RNRegionTransitionService.class);
-		// We use FLAG_UPDATE_CURRENT so that we get the same pending intent back when calling addGeofences() and removeGeofences().
-		geofencePendingIntent = PendingIntent.getService(getReactApplicationContext(), 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+		data = PersistableData.load(reactContext);
+		geofenceManager = new GeofenceManager(reactContext);
 	}
 
 	@ReactMethod
-	public void addCircularRegion(ReadableMap location, int radiusMetres, String requestId, final Promise promise)
+	public void addCircularRegion(@NonNull ReadableMap location, int radiusMetres, @NonNull String requestId, @NonNull final Promise promise)
 	{
-		Log.d(TAG, "addCircularRegion: " + requestId);
-		getReactApplicationContext().startService(new Intent(getReactApplicationContext(), RNRegionTransitionService.class));
-
-		Geofence geofence = new Geofence.Builder().setRequestId(requestId)
-		                                          .setCircularRegion(location.getDouble("latitude"), location.getDouble("longitude"), radiusMetres)
-		                                          .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER | Geofence.GEOFENCE_TRANSITION_EXIT)
-		                                          .setExpirationDuration(Geofence.NEVER_EXPIRE)
-		                                          .build();
-		GeofencingRequest request = new GeofencingRequest.Builder().addGeofence(geofence).setInitialTrigger(Geofence.GEOFENCE_TRANSITION_ENTER).build();
-		LocationServices.GeofencingApi.addGeofences(googleApiClient, request, geofencePendingIntent).setResultCallback(new ResultCallbacks<Status>()
+		try
 		{
-			@Override
-			public void onSuccess(@NonNull Status status)
-			{
-				Log.d(TAG, "addCircularRegion: " + status);
-				promise.resolve(null);
-			}
+			Log.d(TAG, "addCircularRegion: " + requestId);
 
-			@Override
-			public void onFailure(@NonNull Status status)
+			double latitude = location.getDouble("latitude");
+			double longitude = location.getDouble("longitude");
+			final MonitoredRegion region = new MonitoredRegion(requestId, latitude, longitude, radiusMetres);
+			Geofence geofence = region.createGeofence();
+			geofenceManager.addGeofences(Collections.singletonList(geofence), new ResultCallbacks<Status>()
 			{
-				Log.d(TAG, "addCircularRegion: " + status);
-				promise.reject(Integer.toString(status.getStatusCode()), status.getStatusMessage());
-			}
-		});
+				@Override
+				public void onSuccess(@NonNull Status status)
+				{
+					Log.d(TAG, "addCircularRegion: " + status);
+
+					data.addRegion(region);
+					data.save(getReactApplicationContext());
+					promise.resolve(null);
+				}
+
+				@Override
+				public void onFailure(@NonNull Status status)
+				{
+					Log.d(TAG, "addCircularRegion: " + status);
+					promise.reject(Integer.toString(status.getStatusCode()), status.getStatusMessage());
+				}
+			});
+		}
+		catch (Exception e)
+		{
+			promise.reject("addCircularRegion exeption", e);
+		}
 	}
 
 	@ReactMethod
-	public void clearRegions(final Promise promise)
+	public void clearRegions(@NonNull final Promise promise)
 	{
-		Log.d(TAG, "clearRegions");
-		LocationServices.GeofencingApi.removeGeofences(googleApiClient, geofencePendingIntent).setResultCallback(new ResultCallbacks<Status>()
+		try
 		{
-			@Override
-			public void onSuccess(@NonNull Status status)
+			Log.d(TAG, "clearRegions");
+			geofenceManager.clearGeofences(new ResultCallbacks<Status>()
 			{
-				Log.d(TAG, "removeCircularRegion: " + status);
-				promise.resolve(null);
-			}
+				@Override
+				public void onSuccess(@NonNull Status status)
+				{
+					Log.d(TAG, "clearRegions: " + status);
+					data.clearRegions();
+					data.save(getReactApplicationContext());
+					promise.resolve(null);
+				}
 
-			@Override
-			public void onFailure(@NonNull Status status)
-			{
-				Log.d(TAG, "removeCircularRegion: " + status);
-				promise.reject(Integer.toString(status.getStatusCode()), status.getStatusMessage());
-			}
-		});
+				@Override
+				public void onFailure(@NonNull Status status)
+				{
+					Log.d(TAG, "clearRegions: " + status);
+					promise.reject(Integer.toString(status.getStatusCode()), status.getStatusMessage());
+				}
+			});
+		}
+		catch (Exception e)
+		{
+			promise.reject("clearRegions exeption", e);
+		}
 	}
 
-	@javax.annotation.Nullable
+	@Nullable
 	@Override
 	public Map<String, Object> getConstants()
 	{
@@ -119,43 +123,34 @@ public class RNRegionMonitorModule extends ReactContextBaseJavaModule implements
 		return "RNRegionMonitor";
 	}
 
-	@Override
-	public void onConnected(@Nullable Bundle bundle)
-	{
-		Log.d(TAG, "RNRegionMonitor Google client connected");
-	}
-
-	@Override
-	public void onConnectionSuspended(int i)
-	{
-		Log.d(TAG, "RNRegionMonitor Google client suspended: " + i);
-	}
-
-	@Override
-	public void onConnectionFailed(@NonNull ConnectionResult connectionResult)
-	{
-		Log.d(TAG, "RNRegionMonitor Google client failed: " + connectionResult.getErrorMessage());
-	}
-
 	@ReactMethod
-	public void removeCircularRegion(final String requestId, final Promise promise)
+	public void removeCircularRegion(@NonNull final String requestId, @NonNull final Promise promise)
 	{
-		Log.d(TAG, "removeCircularRegion: " + requestId);
-		LocationServices.GeofencingApi.removeGeofences(googleApiClient, Collections.singletonList(requestId)).setResultCallback(new ResultCallbacks<Status>()
+		try
 		{
-			@Override
-			public void onSuccess(@NonNull Status status)
+			Log.d(TAG, "removeCircularRegion: " + requestId);
+			geofenceManager.removeGeofence(requestId, new ResultCallbacks<Status>()
 			{
-				Log.d(TAG, "removeCircularRegion: " + status);
-				promise.resolve(null);
-			}
+				@Override
+				public void onSuccess(@NonNull Status status)
+				{
+					Log.d(TAG, "removeCircularRegion: " + status);
+					data.removeRegion(requestId);
+					data.save(getReactApplicationContext());
+					promise.resolve(null);
+				}
 
-			@Override
-			public void onFailure(@NonNull Status status)
-			{
-				Log.d(TAG, "removeCircularRegion: " + status);
-				promise.reject(Integer.toString(status.getStatusCode()), status.getStatusMessage());
-			}
-		});
+				@Override
+				public void onFailure(@NonNull Status status)
+				{
+					Log.d(TAG, "removeCircularRegion: " + status);
+					promise.reject(Integer.toString(status.getStatusCode()), status.getStatusMessage());
+				}
+			});
+		}
+		catch (Exception e)
+		{
+			promise.reject("removeCircularRegion exeption", e);
+		}
 	}
 }
