@@ -216,6 +216,17 @@ RCT_EXPORT_METHOD(addCircularRegion:(nonnull NSDictionary *)center
     [self _addCircularRegion:center radius:radius identifier:identifier];
 }
 
+RCT_EXPORT_METHOD(clearRegions:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject) {
+    
+    [locationManager.monitoredRegions enumerateObjectsUsingBlock:^(__kindof CLRegion * _Nonnull region, BOOL * _Nonnull stop) {
+        RCTLogInfo(@"Stop monitoring region %@", region.identifier);
+        [locationManager stopMonitoringForRegion:region];
+    }]
+    
+    resolve(nil);
+}
+
 RCT_EXPORT_METHOD(removeCircularRegion:(nonnull NSString *)identifier
                               resolver:(RCTPromiseResolveBlock)resolve
                               rejecter:(RCTPromiseRejectBlock)reject) {
