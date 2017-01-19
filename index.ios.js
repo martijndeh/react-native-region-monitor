@@ -5,6 +5,7 @@ const RegionMonitorEventEmitter = new NativeEventEmitter(INVRegionMonitor);
 
 export default {
 	addCircularRegion: INVRegionMonitor.addCircularRegion,
+	clearRegions: INVRegionMonitor.clearRegions,
 	removeCircularRegion: INVRegionMonitor.removeCircularRegion,
 	requestAuthorization: INVRegionMonitor.requestAuthorization,
 	onRegionChange: (callback) => {
