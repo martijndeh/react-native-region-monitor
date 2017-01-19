@@ -1,7 +1,7 @@
 
 {
   "name": "react-native-region-monitor",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "A simple and easy to use geographical region monitoring API for React Native. This only works for iOS.",
   "main": "index.ios.js",
   "repository": {

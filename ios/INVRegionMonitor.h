@@ -6,7 +6,10 @@
 
 @property (nonatomic, strong) CLLocationManager* locationManager;
 @property (nonatomic, strong) NSMutableDictionary* pendingRegions;
+@property (nonatomic, strong) NSMutableDictionary* unknownRegions;
 @property (nonatomic, strong) NSMutableArray* pendingAuthorizations;
 @property (nonatomic, assign) BOOL isRequestingAuthorization;
+@property (nonatomic, assign) BOOL isQueueingEvents;
+@property (nonatomic, strong) NSMutableArray* queuedRegionEvents;
 
 @end

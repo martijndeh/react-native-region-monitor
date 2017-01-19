@@ -11,7 +11,7 @@ $ react-native link
 
 ## Info.plist
 
-It's important that you set `Privacy - Location Always Usage Description` and `Required background modes` in your Info.plist or region monitoring will not function properly.
+It's important that you set `Privacy - Location Always Usage Description` (`NSLocationAlwaysUsageDescription`) and `Required background modes` (`UIBackgroundModes`) in your Info.plist or region monitoring will not function properly.
 
 ## Usage
 
@@ -45,11 +45,11 @@ regionMonitor.addCircularRegion(center, radius, identifier)
 
 This method creates a new region object and starts monitoring the region. Monitored regions are persisted between app launches. This means you don't have to re-add regions every time your app starts.
 
-If region monitoring authorization is not requested yet, this method automatically requests authorization which display the permission prompt to the user, see [regionMonitor#requestAuthorization](#regionMonitor-requestAuthorization). This only works if the Info.plist is configured correctly. See [Info.plist](#info-plist) section.
+If region monitoring authorization is not requested yet, this method automatically requests authorization which display the permission prompt to the user, see [`regionMonitor#requestAuthorization`](#regionmonitorrequestauthorization). This only works if the Info.plist is configured correctly. See [Info.plist](#infoplist) section.
 
 This method returns a promise which resolves when the region was monitored successfully or rejects when this fails. In case location authorization is not requested, authorization is first requested, and if it allowed, the region is added. This might take a while as it requires user interaction.
 
-Once a region is successfully added and the user enters or exits a region, the region changed callback is invoked. See `regionMonitor#onRegionChange` on how to set and use this callback. When adding a region and the user is already inside the region, the region changed callback is immediately invoked.
+Once a region is successfully added and the user enters or exits a region, the region changed callback is invoked. See [`regionMonitor#onRegionChange`](#regionmonitoronregionchangecallback) on how to set and use this callback. When adding a region and the user is already inside the region, the region changed callback is immediately invoked.
 
 If a region with the same identifier is already being monitored, or is in the process of being added, adding the region fails. If you want to edit a region, you first have to remove it and then add it again.
 
@@ -58,8 +58,6 @@ You can add up to 20 regions. This is a limit set by iOS. If you need to add mor
 ##### Example
 
 ```js
-import regionMonitor from 'react-native-region-monitor';
-
 const center = {
 	latitude: 52.0834365,
 	longitude: 4.3121346,
@@ -83,7 +81,7 @@ Registers a callback to be invoked whenever a user enters or exits a region. The
 
 Both in the simulator and on an actual device it might take some seconds up till some minutes before a region change is noticed by iOS.
 
-This method returns a function which you should invoke when you want to unregister the callback, for example, in your apps `componentWillUnmount`.
+This method returns a function which you should invoke when you want to unregister the callback, for example, in your app's `componentWillUnmount`.
 
 #### Example
 ```js
@@ -129,9 +127,9 @@ Please note: the returned promise might take a while to resolve. This is because
 
 If the user denied the authorization, the user can allow the authorization by going to the settings and changing the location permissions for the given app. It's not possible to prompt the user with an authorization prompt (again).
 
-You don't have to call this method manually. When adding your first region by invoking `regionMonitor#addCircularRegion(center, radius, identifier)` authorization is automatically requested if it has not been requested yet.
+You don't have to call this method manually. When adding your first region by invoking [`regionMonitor#addCircularRegion(center, radius, identifier)`](#regionmonitoraddcircularregioncenter-radius-identifier) authorization is automatically requested if it has not been requested yet.
 
-If you do not configure your Info.plist correctly the authorization prompt will not show. See [Info.plist](#info-plist) for more information.
+If your app's Info.plist is not configured correctly, this method returns a rejected promise. Please make sure to set `Privacy - Location Always Usage Description` in your app's Info.plist. See [Info.plist](#infoplist) for more information.
 
 #### Example
 
