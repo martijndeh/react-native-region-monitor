@@ -119,6 +119,19 @@ regionMonitor.removeCircularRegion(identifier)
 	});
 ```
 
+#### `regionMonitor#clearRegions()`
+
+Removes all monitored regions that have been previously registered. This method returns a promise which always resolves.
+
+#### Example
+
+```js
+regionMonitor.clearRegions()
+	.then(() => {
+		// All regions scheduled to be removed.
+	})
+```
+
 #### `regionMonitor#requestAuthorization()`
 
 Requests the authorization required to initiate region monitoring. This method returns a promise which resolves if the authorization is allowed (or was already allowed) or rejects if region monitoring is not possible (either denied, restricted or not supported by the hardware).
