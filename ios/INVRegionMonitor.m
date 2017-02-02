@@ -34,9 +34,9 @@ RCT_EXPORT_MODULE()
 
 - (NSDictionary *)constantsToExport
 {
-	return @{
-		@"regionMonitorDidChangeRegion": INVRegionMonitorDidChangeRegionEvent,
-	};
+    return @{
+        @"regionMonitorDidChangeRegion": INVRegionMonitorDidChangeRegionEvent,
+    };
 }
 
 - (instancetype) init {
@@ -59,21 +59,21 @@ RCT_EXPORT_MODULE()
 }
 
 - (void)_sendQueuedRegionEvents {
-	for (NSDictionary *body in queuedRegionEvents) {
-		[self sendEventWithName:INVRegionMonitorDidChangeRegionEvent body:body];
-	}
+    for (NSDictionary *body in queuedRegionEvents) {
+        [self sendEventWithName:INVRegionMonitorDidChangeRegionEvent body:body];
+    }
 
-	[queuedRegionEvents removeAllObjects];
+    [queuedRegionEvents removeAllObjects];
 }
 
 - (void)startObserving {
-	if (isQueueingEvents) {
-		isQueueingEvents = NO;
+    if (isQueueingEvents) {
+        isQueueingEvents = NO;
 
-		dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0), dispatch_get_main_queue(), ^{
-			[self _sendQueuedRegionEvents];
-		});
-	}
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0), dispatch_get_main_queue(), ^{
+            [self _sendQueuedRegionEvents];
+        });
+    }
 }
 
 - (void)_failAuthorizationWithError:(NSError *)error {
@@ -139,7 +139,7 @@ RCT_EXPORT_MODULE()
 }
 
 - (void)_sendRegionChangeEventWithIdentifier:(NSString *)identifier didEnter:(BOOL)didEnter didExit:(BOOL)didExit {
-	NSDictionary *body = @{
+    NSDictionary *body = @{
         @"region": @{
             @"identifier": identifier,
         },
@@ -148,13 +148,13 @@ RCT_EXPORT_MODULE()
     };
 
     if (isQueueingEvents) {
-		[queuedRegionEvents addObject:body];
+        [queuedRegionEvents addObject:body];
 
-		// TODO: Check the count of the queuedRegionEvents as it shouldn't grow too big.
-	}
-	else {
-    	[self sendEventWithName:INVRegionMonitorDidChangeRegionEvent body:body];
-	}
+        // TODO: Check the count of the queuedRegionEvents as it shouldn't grow too big.
+    }
+    else {
+        [self sendEventWithName:INVRegionMonitorDidChangeRegionEvent body:body];
+    }
 }
 
 - (CLCircularRegion *)_getMonitoredRegionWithIdentifier:(NSString *)identifier {
@@ -214,6 +214,17 @@ RCT_EXPORT_METHOD(addCircularRegion:(nonnull NSDictionary *)center
     }
 
     [self _addCircularRegion:center radius:radius identifier:identifier];
+}
+
+RCT_EXPORT_METHOD(clearRegions:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject) {
+
+    [locationManager.monitoredRegions enumerateObjectsUsingBlock:^(__kindof CLRegion * _Nonnull region, BOOL * _Nonnull stop) {
+        RCTLogInfo(@"Stop monitoring region %@", region.identifier);
+        [locationManager stopMonitoringForRegion:region];
+    }];
+
+    resolve(nil);
 }
 
 RCT_EXPORT_METHOD(removeCircularRegion:(nonnull NSString *)identifier
