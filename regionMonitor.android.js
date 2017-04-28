@@ -24,5 +24,11 @@ export default {
 	},
 	onRegionChange: (callback) => {
 		callbacks.push(callback);
+		return function off() {
+			const idx = callbacks.indexOf(callback);
+			if(idx >= 0) {
+				callbacks.splice(i, 1);
+			}
+		};
 	},
 }
