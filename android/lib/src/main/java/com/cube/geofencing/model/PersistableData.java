@@ -41,7 +41,7 @@ public class PersistableData
 		Kryo serialiser = createSerialiser();
 
 		String path = context.getFilesDir().getAbsolutePath() + "/" + CACHE_FILE;
-		Log.d(TAG, "Attempt to load crowdsourcing state from " + path);
+		Log.d(TAG, "Attempt to load geofencing state from " + path);
 
 		if (new File(path).exists())
 		{
