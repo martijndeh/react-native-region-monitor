@@ -1,12 +1,23 @@
 # react-native-region-monitor
 
-A simple and easy to use geographical region monitoring API for React Native, on iOS and Android.
+A simple and easy to use geographical region monitoring API for React Native on iOS. Android is currently being tested.
 
 ## Getting started
 
 ```
 $ npm install react-native-region-monitor --save
 $ react-native link
+```
+
+## Android
+
+We're currently testing the Android implemention and it's available under the `next` tag on npm. Please help us test and let us know if it works!
+
+To install:
+
+```
+npm install react-native-region-monitor@next --save
+react-native link
 ```
 
 ## Info.plist
