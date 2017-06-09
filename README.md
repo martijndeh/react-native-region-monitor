@@ -1,6 +1,6 @@
 # react-native-region-monitor
 
-A simple and easy to use geographical region monitoring API for React Native. This only works for iOS.
+A simple and easy to use geographical region monitoring API for React Native, on iOS and Android.
 
 ## Getting started
 
@@ -40,7 +40,7 @@ regionMonitor.addCircularRegion(center, radius, identifier)
 
 #### `regionMonitor#addCircularRegion(center, radius, identifier)`
 - `center` `Object` The coordinate which defines the center location of the circular region.
-- `radius` `Integer` The radius of the region in meters. If the radius exceeds the maximum as defined by iOS, the radius is automatically clamped to the maximum value.
+- `radius` `Integer` The radius of the region in meters. If the radius exceeds the maximum as defined by the platform OS, the radius is automatically clamped to the maximum value.
 - `identifier` `String` A unique identifier of the region.
 
 This method creates a new region object and starts monitoring the region. Monitored regions are persisted between app launches. This means you don't have to re-add regions every time your app starts.
@@ -53,7 +53,7 @@ Once a region is successfully added and the user enters or exits a region, the r
 
 If a region with the same identifier is already being monitored, or is in the process of being added, adding the region fails. If you want to edit a region, you first have to remove it and then add it again.
 
-You can add up to 20 regions. This is a limit set by iOS. If you need to add more regions, there are alternative libraries which workaround this limitation.
+On iOS, you can add up to 20 regions. This is a limit set by iOS. If you need to add more regions, there are alternative libraries which workaround this limitation.
 
 ##### Example
 
@@ -79,7 +79,7 @@ regionMonitor.addCircularRegion(center, radius, identifier)
 
 Registers a callback to be invoked whenever a user enters or exits a region. The callback is invoked with an `event` argument which contains `didEnter` and `didExit` booleans and a `region` object which contains an `identifier` property. The radius and center location are not available on the region object.
 
-Both in the simulator and on an actual device it might take some seconds up till some minutes before a region change is noticed by iOS.
+Both in the simulator and on an actual device it might take some seconds up till some minutes before a region change is noticed.
 
 This method returns a function which you should invoke when you want to unregister the callback, for example, in your app's `componentWillUnmount`.
 
