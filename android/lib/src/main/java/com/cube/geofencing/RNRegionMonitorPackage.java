@@ -16,6 +16,12 @@ public class RNRegionMonitorPackage implements ReactPackage
 	{
 		return Collections.<NativeModule>singletonList(new RNRegionMonitorModule(reactContext));
 	}
+ 
+	// deprecated >= RN 0.47.0
+	public List<Class<? extends JavaScriptModule>> createJSModules()
+	{
+ 		return Collections.emptyList();
+ 	}
 
 	@Override
 	public List<ViewManager> createViewManagers(ReactApplicationContext reactContext)
