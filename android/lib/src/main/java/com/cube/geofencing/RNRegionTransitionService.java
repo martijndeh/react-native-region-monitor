@@ -61,6 +61,8 @@ public class RNRegionTransitionService extends HeadlessJsTaskService
         jsArgs.putBoolean("didEnter", geofenceTransition == Geofence.GEOFENCE_TRANSITION_ENTER);
 		jsArgs.putBoolean("didExit", geofenceTransition == Geofence.GEOFENCE_TRANSITION_EXIT);
 		//jsArgs.putBoolean("didDwell", geofencingEvent.getGeofenceTransition() == Geofence.GEOFENCE_TRANSITION_DWELL);
+        jsArgs.putDouble("accuracy", triggeringLocation.getAccuracy());
+        jsArgs.putDouble("bearing", triggeringLocation.getBearing());
 
         Log.d(TAG, "Report geofencing event to JS: " + jsArgs);
 		return new HeadlessJsTaskConfig(RNRegionMonitorModule.TRANSITION_TASK_NAME, jsArgs, 0, true);
