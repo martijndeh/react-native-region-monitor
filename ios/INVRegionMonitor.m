@@ -138,13 +138,19 @@ RCT_EXPORT_MODULE()
     );
 }
 
-- (void)_sendRegionChangeEventWithIdentifier:(NSString *)identifier didEnter:(BOOL)didEnter didExit:(BOOL)didExit {
+- (void)_sendRegionChangeEventWithIdentifier:(NSString *)identifier didEnter:(BOOL)didEnter didExit:(BOOL)didExit locationManager:(CLLocationManager *)locationManager {
     NSDictionary *body = @{
         @"region": @{
             @"identifier": identifier,
         },
         @"didEnter": @(didEnter),
         @"didExit": @(didExit),
+        @"accuracy": @(locationManager.location != nil ? locationManager.location.horizontalAccuracy : 99999),
+        @"bearing": @(locationManager.location != nil ? locationManager.location.course : 0),
+        @"location": @{
+                @"latitude": @(locationManager.location != nil ? locationManager.location.coordinate.latitude : 0),
+                @"longitude": @(locationManager.location != nil ? locationManager.location.coordinate.longitude : 0)
+        }
     };
 
     if (isQueueingEvents) {
@@ -313,7 +319,7 @@ RCT_EXPORT_METHOD(requestAuthorization:(RCTPromiseResolveBlock)resolve
         }
 
         if (didExit || didEnter) {
-            [self _sendRegionChangeEventWithIdentifier:region.identifier didEnter:didEnter didExit:didExit];
+            [self _sendRegionChangeEventWithIdentifier:region.identifier didEnter:didEnter didExit:didExit locationManager:locationManager];
         }
 
         if (isUnknownRegion) {
